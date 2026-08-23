@@ -104,12 +104,6 @@ newoption {
     description = "Extract portaudio",
 }
 
-newoption {
-    category = "extract",
-    trigger = "ext-sdl",
-    description = "Extract sdl",
-}
-
 -- build
 newoption {
     category = "build",
@@ -178,12 +172,6 @@ newoption {
     category = "build",
     trigger = "build-portaudio",
     description = "Build portaudio",
-}
-
-newoption {
-    category = "build",
-    trigger = "build-sdl",
-    description = "Build sdl",
 }
 
 local function merge_list(src, dest)
@@ -476,9 +464,6 @@ if _OPTIONS["ext-opus"] or _OPTIONS["all-ext"] then
 end
 if _OPTIONS["ext-portaudio"] or _OPTIONS["all-ext"] then
     table.insert(deps_to_extract, { 'portaudio/portaudio.tar.gz', 'portaudio' })
-end
-if _OPTIONS["ext-sdl"] or _OPTIONS["all-ext"] then
-    table.insert(deps_to_extract, { 'sdl/sdl.tar.gz', 'sdl' })
 end
 
 -- start extraction
@@ -837,25 +822,5 @@ if _OPTIONS["build-portaudio"] or _OPTIONS["all-build"] then
     end
     if _OPTIONS["64-build"] then
         cmake_build('portaudio', false, portaudio_common_defs)
-    end
-end
-
-if _OPTIONS["build-sdl"] or _OPTIONS["all-build"] then
-    local sdl_common_defs = {
-        -- enable / disable SDL subsystems
-        "SDL_AUDIO=OFF",
-        "SDL_VIDEO=OFF",
-        "SDL_HIDAPI=OFF",
-        "SDL_SENSOR=OFF",
-        "SDL_DIALOG=OFF",
-        "SDL_TRAY=OFF",
-        "SDL_UNIX_CONSOLE_BUILD=ON",
-    }
-
-    if _OPTIONS["32-build"] then
-        cmake_build('sdl', true, sdl_common_defs)
-    end
-    if _OPTIONS["64-build"] then
-        cmake_build('sdl', false, sdl_common_defs)
     end
 end
