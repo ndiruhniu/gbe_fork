@@ -1006,7 +1006,7 @@ project "api_experimental"
         links {
             common_link_linux,
             "X11",
-            "xcb", -- ingame_overlay dependency (xcb hook)
+            "xcb", "xcb-keysyms", -- ingame_overlay dependencies (xcb hook)
         }
 
 
