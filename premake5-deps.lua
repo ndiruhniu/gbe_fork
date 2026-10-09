@@ -483,7 +483,6 @@ end
 if _OPTIONS["ext-portaudio"] or _OPTIONS["all-ext"] then
     table.insert(deps_to_extract, { 'portaudio/portaudio.tar.gz', 'portaudio' })
 end
-
 -- start extraction
 for _, dep in pairs(deps_to_extract) do
     -- check archive
@@ -874,3 +873,4 @@ if _OPTIONS["build-portaudio"] or _OPTIONS["all-build"] then
         cmake_build('portaudio', "arm", portaudio_common_defs)
     end
 end
+

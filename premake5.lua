@@ -439,6 +439,7 @@ local common_link_win = {
     "Gdi32"    .. static_postfix,
     "Dwmapi"   .. static_postfix,
     "OpenGL32" .. static_postfix,
+    "Dxgi"     .. static_postfix, -- ingame_overlay (CreateDXGIFactory1 used by the ImGui DX12 backend)
 }
 -- add deps to win
 table_append(common_link_win, deps_link)
@@ -1005,7 +1006,7 @@ project "api_experimental"
         links {
             common_link_linux,
             "X11",
-            "xcb", "xcb-keysyms", -- ingame_overlay dependencies (xcb hook)
+            "xcb", -- ingame_overlay dependency (xcb hook)
         }
 
 
