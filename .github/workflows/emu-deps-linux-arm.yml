@@ -80,6 +80,7 @@ jobs:
           sudo apt install -y libx11-dev # needed for overlay build
           sudo apt install -y libxcb1-dev # needed for overlay build (xcb hook)
           sudo apt install -y libxcb-xinput-dev # needed for overlay build (header file xcb/xinput.h)
+          sudo apt install -y libxcb-keysyms1-dev # needed for overlay build (header file xcb/xcb_keysyms.h)
           # sudo apt install -y binutils # (optional) contains the tool 'readelf' mainly, and other usefull binary stuff
 
       - name: "Build deps"
