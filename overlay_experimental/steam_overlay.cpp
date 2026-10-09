@@ -285,8 +285,8 @@ Steam_Overlay::~Steam_Overlay()
 void Steam_Overlay::request_renderer_detector()
 {
     PRINT_DEBUG_ENTRY();
-    // request renderer detection
-    future_renderer = InGameOverlay::DetectRenderer();
+    // nothing to start here: the new ingame_overlay API has no async detection request,
+    // DetectRenderer() is polled from 'renderer_hook_proc()' until it reports that it is done
 }
 
 void Steam_Overlay::set_renderer_hook_timeout()
@@ -302,29 +302,43 @@ void Steam_Overlay::cleanup_renderer_hook()
 
 bool Steam_Overlay::renderer_hook_proc()
 {
-    if (renderer_hook_timeout_ctr > 0 && future_renderer.wait_for(std::chrono::milliseconds(renderer_detector_polling_ms)) != std::future_status::ready) {
-        return false;
+    // run one detection pass:
+    // true  -> detection can continue, call again later
+    // false -> detection is done (a renderer was found, or the detection was stopped)
+    // the hook is only available through GetDetectedRenderer() once the detection is done
+    const bool keep_detecting = InGameOverlay::DetectRenderer();
+    InGameOverlay::RendererHook_t *detected_renderer = keep_detecting ? nullptr : InGameOverlay::GetDetectedRenderer();
+
+    if (!detected_renderer && keep_detecting && setup_overlay_called && renderer_hook_timeout_ctr > 0) {
+        --renderer_hook_timeout_ctr;
+        return false; // not found yet, poll again
     }
 
-    // free detector resources and check for failure
+    // timed out / overlay deinitialized: stop the detection, then give it a last chance
+    // since a renderer might have been found right after the last pass
+    if (!detected_renderer) {
+        InGameOverlay::StopRendererDetection();
+        detected_renderer = InGameOverlay::GetDetectedRenderer();
+    }
+
+    // note: the hook (if any) must be fetched *before* freeing the detector,
+    // the detector only owns the hooks which weren't selected, we own the selected one
     cleanup_renderer_hook();
+
     // exit on failure
-    bool final_chance = future_renderer.wait_for(std::chrono::milliseconds(1)) == std::future_status::ready;
     // again check for 'setup_overlay_called' to be extra sure that the overlay wasn't deinitialized
-    if (!setup_overlay_called || !final_chance || renderer_hook_timeout_ctr <= 0) {
+    if (!setup_overlay_called || !detected_renderer) {
         PRINT_DEBUG("failed to detect renderer, ctr=%i, overlay was set up=%i",
             renderer_hook_timeout_ctr, (int)setup_overlay_called
         );
+        // we own the hook, so don't leak it if the overlay was deinitialized in the meantime
+        delete detected_renderer;
         return true;
     }
 
     // do a one time initialization
     // std::lock_guard<std::recursive_mutex> lock(overlay_mutex);
-    _renderer = future_renderer.get();
-    if (!_renderer) { // is this even possible?
-        PRINT_DEBUG("renderer hook was null!");
-        return true;
-    }
+    _renderer = detected_renderer;
     PRINT_DEBUG("got renderer hook %p for '%s'", _renderer, _renderer->GetLibraryName());
 
     // note: make sure to load all relevant strings before creating the font(s), otherwise some glyphs ranges will be missing
@@ -2546,9 +2560,10 @@ void Steam_Overlay::UnSetupOverlay()
             }
             unpin_all_screenshots();
 
-            // manually calling this dtor looks bad, but it actually prevents a lot of crashes on exit, don't remove it!
+            // manually destroying the hook looks bad, but it actually prevents a lot of crashes on exit, don't remove it!
             // many DX12 games will crash on exit if the hook wasn't manually removed (ex appid 2933080, 1583230)
-            _renderer->~RendererHook_t();
+            // the detector hands over the ownership of the selected hook, so we're responsible for deleting it
+            delete _renderer;
             _renderer = nullptr;
         }
 
