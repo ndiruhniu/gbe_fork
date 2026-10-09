@@ -104,6 +104,8 @@ jobs:
           sudo apt install -y libglx-dev # needed for overlay build (header files such as GL/glx.h)
           sudo apt install -y libgl-dev # needed for overlay build (header files such as GL/gl.h)
           sudo apt install -y libx11-dev # needed for overlay build
+          sudo apt install -y libxcb1-dev # needed for overlay build (xcb hook)
+          sudo apt install -y libxcb-xinput-dev # needed for overlay build (header file xcb/xinput.h)
           # sudo apt install -y binutils # (optional) contains the tool 'readelf' mainly, and other usefull binary stuff
 
       # build target
