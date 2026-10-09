@@ -241,7 +241,6 @@ local x32_deps_include = {
 
 local x32_deps_overlay_include = {
     path.join(deps_dir, "ingame_overlay/install32/include"),
-    path.join(deps_dir, "ingame_overlay/deps/System/install32/include"),
     path.join(deps_dir, "ingame_overlay/deps/mini_detour/install32/include"),
 }
 
@@ -257,7 +256,6 @@ local x64_deps_include = {
 
 local x64_deps_overlay_include = {
     path.join(deps_dir, "ingame_overlay/install64/include"),
-    path.join(deps_dir, "ingame_overlay/deps/System/install64/include"),
     path.join(deps_dir, "ingame_overlay/deps/mini_detour/install64/include"),
 }
 
@@ -273,7 +271,6 @@ local arm_deps_include = {
 
 local arm_deps_overlay_include = {
     path.join(deps_dir, "ingame_overlay/installarm/include"),
-    path.join(deps_dir, "ingame_overlay/deps/System/installarm/include"),
     path.join(deps_dir, "ingame_overlay/deps/mini_detour/installarm/include"),
 }
 
@@ -456,7 +453,6 @@ table_append(common_link_linux, deps_link)
 -- overlay libs
 local overlay_link = {
     "ingame_overlay",
-    "system", -- ingame_overlay dependency
     "mini_detour", -- ingame_overlay dependency
 }
 -- we add them later when needed
@@ -487,7 +483,6 @@ local x32_deps_libdir = {
 
 local x32_deps_overlay_libdir = {
     path.join(deps_dir, "ingame_overlay/install32/lib"),
-    path.join(deps_dir, "ingame_overlay/deps/System/install32/lib"),
     path.join(deps_dir, "ingame_overlay/deps/mini_detour/install32/lib"),
 }
 
@@ -504,7 +499,6 @@ local x64_deps_libdir = {
 
 local x64_deps_overlay_libdir = {
     path.join(deps_dir, "ingame_overlay/install64/lib"),
-    path.join(deps_dir, "ingame_overlay/deps/System/install64/lib"),
     path.join(deps_dir, "ingame_overlay/deps/mini_detour/install64/lib"),
 }
 
@@ -521,7 +515,6 @@ local arm_deps_libdir = {
 
 local arm_deps_overlay_libdir = {
     path.join(deps_dir, "ingame_overlay/installarm/lib"),
-    path.join(deps_dir, "ingame_overlay/deps/System/installarm/lib"),
     path.join(deps_dir, "ingame_overlay/deps/mini_detour/installarm/lib"),
 }
 
@@ -1011,7 +1004,8 @@ project "api_experimental"
     filter { "system:not windows", }
         links {
             common_link_linux,
-            "X11"
+            "X11",
+            "xcb", "xcb-keysyms", -- ingame_overlay dependencies (xcb hook)
         }
 
 

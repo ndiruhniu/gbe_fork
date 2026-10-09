@@ -804,10 +804,6 @@ if _OPTIONS["build-ingame_overlay"] or _OPTIONS["all-build"] then
     end
 
     if _OPTIONS["32-build"] then
-        cmake_build('ingame_overlay/deps/System', "32", {
-            'SYSTEM_BUILD_TESTS=OFF',
-            'SYSTEM_DYNAMIC_RUNTIME=OFF',
-        }, nil, ingame_overlay_fixes)
         cmake_build('ingame_overlay/deps/mini_detour', "32", {
             'MINIDETOUR_BUILD_TESTS=OFF',
             'MINIDETOUR_DYNAMIC_RUNTIME=OFF',
@@ -815,10 +811,6 @@ if _OPTIONS["build-ingame_overlay"] or _OPTIONS["all-build"] then
         cmake_build('ingame_overlay', "32", ingame_overlay_common_defs, nil, ingame_overlay_fixes)
     end
     if _OPTIONS["64-build"] then
-        cmake_build('ingame_overlay/deps/System', "64", {
-            'SYSTEM_BUILD_TESTS=OFF',
-            'SYSTEM_DYNAMIC_RUNTIME=OFF',
-        }, nil, ingame_overlay_fixes)
         cmake_build('ingame_overlay/deps/mini_detour', "64", {
             'MINIDETOUR_BUILD_TESTS=OFF',
             'MINIDETOUR_DYNAMIC_RUNTIME=OFF',
@@ -826,10 +818,6 @@ if _OPTIONS["build-ingame_overlay"] or _OPTIONS["all-build"] then
         cmake_build('ingame_overlay', "64", ingame_overlay_common_defs, nil, ingame_overlay_fixes)
     end
     if _OPTIONS["arm-build"] then
-        cmake_build('ingame_overlay/deps/System', "arm", {
-            'SYSTEM_BUILD_TESTS=OFF',
-            'SYSTEM_DYNAMIC_RUNTIME=OFF',
-        }, nil, ingame_overlay_fixes)
         cmake_build('ingame_overlay/deps/mini_detour', "arm", {
             'MINIDETOUR_BUILD_TESTS=OFF',
             'MINIDETOUR_DYNAMIC_RUNTIME=OFF',
