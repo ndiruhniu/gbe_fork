@@ -8,7 +8,6 @@
 
 #ifdef EMU_OVERLAY
 
-#include <future>
 #include <atomic>
 #include <memory>
 #include "dll/playtime.h"
@@ -193,7 +192,7 @@ class Steam_Overlay
     // changed only when overlay is shown/hidden, true means overlay is shown
     std::atomic_uint32_t obscure_cursor_requests = 0;
     
-    std::future<InGameOverlay::RendererHook_t *> future_renderer{};
+    // owned by us once detection succeeded (the detector hands over the ownership), released with 'delete'
     InGameOverlay::RendererHook_t *_renderer{};
 
     common_helpers::KillableWorker renderer_detector_delay_thread{};
