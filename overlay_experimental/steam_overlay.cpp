@@ -1996,8 +1996,22 @@ uint32 Steam_Overlay::apply_global_style_color()
 // Try to make this function as short as possible or it might affect game's fps.
 void Steam_Overlay::render_main_window()
 {
+    // short name of the graphics API used by the overlay
+    const char *renderer_name = "Unknown";
+    if (_renderer != nullptr) {
+        switch (_renderer->GetRendererHookType()) {
+            case InGameOverlay::RendererHookType_t::DirectX9:  renderer_name = "DX9";    break;
+            case InGameOverlay::RendererHookType_t::DirectX10: renderer_name = "DX10";   break;
+            case InGameOverlay::RendererHookType_t::DirectX11: renderer_name = "DX11";   break;
+            case InGameOverlay::RendererHookType_t::DirectX12: renderer_name = "DX12";   break;
+            case InGameOverlay::RendererHookType_t::OpenGL:    renderer_name = "OpenGL"; break;
+            case InGameOverlay::RendererHookType_t::Vulkan:    renderer_name = "Vulkan"; break;
+            case InGameOverlay::RendererHookType_t::Metal:     renderer_name = "Metal";  break;
+            default: break;
+        }
+    }
     char tmp[TRANSLATION_BUFFER_SIZE]{};
-    snprintf(tmp, sizeof(tmp), translationRenderer[current_language], (_renderer == nullptr ? "Unknown" : _renderer->GetLibraryName()));
+    snprintf(tmp, sizeof(tmp), translationRenderer[current_language], renderer_name);
     std::string windowTitle{};
     // Note: don't translate this, project and author names are nouns, they must be kept intact for proper referral
     // think of it as translating "Protobuf - Google"
@@ -2197,6 +2211,8 @@ void Steam_Overlay::render_main_window()
                 unsigned hh = static_cast<unsigned>(session_sec / 3600);
                 ImGui::Text(translationPlaytimeLabelLine[current_language], hh, mm, ss);
             }
+            // the graphics API used by the overlay (OpenGL, Vulkan, DirectX 9/10/11/12), "tmp" is built at the start of this function
+            ImGui::TextUnformatted(tmp);
             ImGui::PopStyleColor();
             ImGui::EndGroup();
         }
