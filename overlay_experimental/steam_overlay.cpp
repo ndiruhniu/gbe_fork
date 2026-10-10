@@ -2750,6 +2750,9 @@ void Steam_Overlay::render_main_window()
 
                     ImGui::Text("%s", translationUsername[current_language]);
                     ImGui::SameLine();
+                    // fill what's left of the line: the default width is relative to the whole window, so after a long
+                    // translated label (French, Russian...) the field was pushed out of the window to the right
+                    ImGui::SetNextItemWidth(-FLT_MIN);
                     ImGui::InputText("##username", username_text, sizeof(username_text), 0);
 
                     ImGui::Separator();
