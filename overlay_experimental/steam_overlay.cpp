@@ -2180,9 +2180,9 @@ void Steam_Overlay::render_main_window()
             localtime_r(&now_time, &now_tm);
 #endif
             char clock_buf[16]{};
-            std::strftime(clock_buf, sizeof(clock_buf), "%I:%M %p", &now_tm);
+            std::strftime(clock_buf, sizeof(clock_buf), "%H:%M", &now_tm);
             char date_buf[64]{};
-            std::strftime(date_buf, sizeof(date_buf), "%a, %B %d, %Y", &now_tm);
+            std::strftime(date_buf, sizeof(date_buf), "%d.%m.%Y", &now_tm);
 
             ImGui::SetCursorPos(ImVec2(pad, pad));
             ImGui::BeginGroup();
