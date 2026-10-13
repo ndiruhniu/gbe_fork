@@ -11,6 +11,7 @@
 #include <string>
 #include <sstream>
 #include <cctype>
+#include <cstring>
 #include <cmath>
 #include <utility>
 #include <unordered_set>
@@ -21,6 +22,9 @@
 
 #ifdef __WINDOWS__
 #include <shellapi.h>
+#elif defined(__LINUX__)
+#include <langinfo.h> // the system's date format
+#include <locale.h>
 #endif
 
 #include "InGameOverlay/RendererDetector.h"
@@ -479,6 +483,11 @@ void Steam_Overlay::create_fonts()
         font_builder.AddText(translationSteamId[i]);
         font_builder.AddText(translationAppId[i]);
         font_builder.AddText(translationBackToGame[i]);
+        font_builder.AddText(translationClockTooltip[i]);
+        font_builder.AddText(translationDateTooltip[i]);
+        font_builder.AddText(translationDay[i]);
+        font_builder.AddText(translationMonth[i]);
+        font_builder.AddText(translationYear[i]);
         font_builder.AddText(translationPlaytimeLabelLine[i]);
         font_builder.AddText(translationNoFriends[i]);
         font_builder.AddText(translationNoAchievementsConfigured[i]);
@@ -1884,8 +1893,8 @@ void Steam_Overlay::overlay_render_proc()
     }
 
     if (stats.show_any_stats()) {
-        // below the clock and the date of the overlay's top bar while it is shown
-        stats.top_inset = show_overlay ? std::floor(ImGui::GetFontSize() * 4.5f) : 0.0f;
+        // (while the overlay is shown, render_main_window() keeps it below the lines of the top bar)
+        if (!show_overlay) stats.top_inset = 0.0f;
         stats.render_stats(current_language);
     }
 
@@ -1998,7 +2007,7 @@ uint32 Steam_Overlay::apply_global_style_color()
 // Try to make this function as short as possible or it might affect game's fps.
 void Steam_Overlay::render_main_window()
 {
-    // short name of the graphics API used by the overlay
+    // the graphics API the overlay hooked, by its short name (the library name is the full path of a DLL)
     const char *renderer_name = "Unknown";
     if (_renderer != nullptr) {
         switch (_renderer->GetRendererHookType()) {
@@ -2158,7 +2167,114 @@ void Steam_Overlay::render_main_window()
         const float pad = std::floor(fs * 0.9f + 0.5f);
         const float tile = std::floor(fs * 2.5f + 0.5f); // edge of a toolbar button
         const float top_y = std::floor(fs * 5.5f);
-        const float left_top_y = std::floor(fs * 8.2f);
+
+        // top bar, left (drawn further below): the clock, the date, the playtime of this session and the renderer.
+        // The clock and the date are drawn big, the clock as wide as the date: together a rectangle
+        time_t now_time = time(nullptr);
+        struct tm now_tm{};
+#ifdef _MSC_VER
+        localtime_s(&now_tm, &now_time);
+#else
+        localtime_r(&now_time, &now_tm);
+#endif
+        // the clock: hours and minutes of the local time, 24-hour
+        char clock_buf[16]{};
+        std::strftime(clock_buf, sizeof(clock_buf), "%H:%M", &now_tm);
+
+        // the date: the day, the month and the year as numbers, in the order and with the separators of the system's
+        // short date format (a month written as a name is shown as a number too). The format is read once, written
+        // with the letters d, M and y
+        static const std::string date_format = []() {
+            std::string format{};
+#if defined(__WINDOWS__)
+            wchar_t buf[80]{};
+            if (GetLocaleInfoW(LOCALE_USER_DEFAULT, LOCALE_SSHORTDATE, buf, 80) > 0) {
+                bool quoted = false; // text between quotes is not a part of the date
+                for (const wchar_t *c = buf; *c; ++c) {
+                    if (*c == L'\'') quoted = !quoted;
+                    else if (!quoted && *c < 0x80) format += static_cast<char>(*c);
+                }
+            }
+#elif defined(__LINUX__)
+            locale_t loc = newlocale(LC_TIME_MASK, "", static_cast<locale_t>(0));
+            if (loc) {
+                // a strftime format, such as "%d.%m.%Y"
+                for (const char *c = nl_langinfo_l(D_FMT, loc); *c; ++c) {
+                    if (*c != '%' || !c[1]) {
+                        if (static_cast<unsigned char>(*c) < 0x80) format += *c;
+                        continue;
+                    }
+                    switch (*++c) {
+                        case 'd': format += "dd"; break;
+                        case 'e': format += "d"; break;
+                        case 'm': case 'b': case 'B': case 'h': format += "MM"; break;
+                        case 'Y': format += "yyyy"; break;
+                        case 'y': format += "yy"; break;
+                        case 'D': format += "MM/dd/yy"; break;
+                        case 'F': format += "yyyy-MM-dd"; break;
+                        default: break; // the day of the week and the like are not shown
+                    }
+                }
+                freelocale(loc);
+            }
+#endif
+            // ISO 8601 when the system's format can't be read
+            return format.find_first_of("dMy") == std::string::npos ? std::string("yyyy-MM-dd") : format;
+        }();
+        // the numbers with the separators between them, and the names of the parts in the same order for the tooltip.
+        // The day and the month always have two digits: the date keeps its width, and so does the clock
+        std::string date_text{}, date_parts{}, separator{};
+        for (size_t i = 0; i < date_format.size();) {
+            const char letter = date_format[i];
+            size_t count = 1;
+            while (i + count < date_format.size() && date_format[i + count] == letter) ++count;
+            i += count;
+            char number[16]{};
+            const char *part = nullptr;
+            if (letter == 'd' && count <= 2) { // ("ddd" and "dddd" are the name of the day of the week)
+                snprintf(number, sizeof(number), "%02d", now_tm.tm_mday);
+                part = translationDay[current_language];
+            } else if (letter == 'M') {
+                snprintf(number, sizeof(number), "%02d", now_tm.tm_mon + 1);
+                part = translationMonth[current_language];
+            } else if (letter == 'y') {
+                snprintf(number, sizeof(number), "%02d", count <= 2 ? now_tm.tm_year % 100 : now_tm.tm_year + 1900);
+                part = translationYear[current_language];
+            } else if (letter == '.' || letter == '/' || letter == '-' || letter == ' ') {
+                separator.append(count, letter);
+            }
+            if (!part) continue;
+            if (!date_text.empty()) {
+                // (a slash where the format has nothing the display draws between two numbers: a letter, or only a space)
+                const std::string between = separator.find_first_not_of(' ') == std::string::npos ? std::string("/") : separator;
+                date_text += between;
+                date_parts += between;
+            }
+            separator.clear();
+            date_text += number;
+            date_parts += part;
+        }
+        // the clock and the date are plain text in the overlay's font, just big: the date at `date_h` pixels, the clock as
+        // big as it can be without getting wider than the date. They are measured on "00:00" and "00.00.00" (every digit a
+        // zero) and not on the numbers shown: the digits can have different widths and the size would change every minute
+        auto zeros = [](std::string text) {
+            for (char &c : text) { if (c >= '0' && c <= '9') c = '0'; }
+            return text;
+        };
+        ImFont *clock_font = ImGui::GetFont();
+        auto text_width = [clock_font](float size, const std::string &text) { return clock_font->CalcTextSizeA(size, FLT_MAX, 0.0f, text.c_str()).x; };
+        const float date_h = std::floor(fs * 1.6f);
+        const std::string date_ref = zeros(date_text);
+        const std::string clock_ref = zeros(clock_buf);
+        const float date_w = text_width(date_h, date_ref);
+        float clock_h = std::floor(date_h * date_w / (std::max)(1.0f, text_width(date_h, clock_ref)));
+        clock_h = (std::min)((std::max)(clock_h, date_h), date_h * 3.0f);
+        // the stats box goes below these lines while the overlay is shown, the left column below the stats box
+        float top_bar_bottom = pad + clock_h + ImGui::GetStyle().ItemSpacing.y + date_h + ImGui::GetTextLineHeightWithSpacing();
+        if (settings->record_playtime && playtime_counter) top_bar_bottom += ImGui::GetTextLineHeightWithSpacing();
+        const float top_gap = std::floor(fs * 0.75f + 0.5f);
+        stats.top_inset = top_bar_bottom + top_gap - pad; // (the stats box keeps the same distance from the edges itself)
+        const float left_top_y = std::floor(top_bar_bottom + top_gap + fs * 2.0f + top_gap);
         const float toolbar_y = std::floor(io.DisplaySize.y - std::floor(pad * 2.5f + 0.5f) - tile);
         const float room_h = (std::max)(fs * 10.0f, toolbar_y - pad - top_y);
         const float right_h = (std::min)(fs * 20.0f, (room_h - pad) * 0.5f); // Friends and History share the right column
@@ -2186,28 +2302,23 @@ void Steam_Overlay::render_main_window()
         const bool show_stats_checkboxes = settings->overlay_show_checkbox_fps ||
             settings->overlay_show_checkbox_frametime || settings->overlay_show_checkbox_playtime;
 
-        // top bar, left: the clock, the date and the playtime of this session
+        // top bar, left: the clock and the date (prepared above), the playtime of this session and the renderer
         {
-            time_t now_time = time(nullptr);
-            struct tm now_tm{};
-#ifdef _MSC_VER
-            localtime_s(&now_tm, &now_time);
-#else
-            localtime_r(&now_time, &now_tm);
-#endif
-            // 24-hour clock and a numeric DD.MM.YYYY date: readable wherever the user is from, and the same in every
-            // overlay language (strftime's day and month names are always English, the C locale is never changed)
-            char clock_buf[16]{};
-            std::strftime(clock_buf, sizeof(clock_buf), "%H:%M", &now_tm);
-            char date_buf[64]{};
-            std::strftime(date_buf, sizeof(date_buf), "%d.%m.%Y", &now_tm);
-
             ImGui::SetCursorPos(ImVec2(pad, pad));
             ImGui::BeginGroup();
-            // a white clock and light gray lines under it, readable over a bright game too
+            // a white clock and light gray lines under it, readable over a bright game too.
+            // Hovering the clock or the date tells what they show
+            ImGui::PushFont(nullptr, clock_h);
             ImGui::TextColored(ImVec4(1.0f, 1.0f, 1.0f, 1.0f), "%s", clock_buf);
+            const bool clock_hovered = ImGui::IsItemHovered();
+            ImGui::PopFont();
+            if (clock_hovered) ImGui::SetTooltip("%s", translationClockTooltip[current_language]);
+            ImGui::PushFont(nullptr, date_h);
+            ImGui::TextColored(ImVec4(0.722f, 0.737f, 0.749f, 1.0f), "%s", date_text.c_str());
+            const bool date_hovered = ImGui::IsItemHovered();
+            ImGui::PopFont();
+            if (date_hovered) ImGui::SetTooltip(translationDateTooltip[current_language], date_parts.c_str());
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.722f, 0.737f, 0.749f, 1.0f));
-            ImGui::TextUnformatted(date_buf);
             if (settings->record_playtime && playtime_counter) {
                 uint64_t session_sec = playtime_counter->session_seconds();
                 unsigned ss = static_cast<unsigned>(session_sec % 60);
@@ -2215,8 +2326,7 @@ void Steam_Overlay::render_main_window()
                 unsigned hh = static_cast<unsigned>(session_sec / 3600);
                 ImGui::Text(translationPlaytimeLabelLine[current_language], hh, mm, ss);
             }
-            // the graphics API used by the overlay (OpenGL, Vulkan, DirectX 9/10/11/12), "tmp" is built at the start of this function
-            ImGui::TextUnformatted(tmp);
+            ImGui::TextUnformatted(tmp); // "Renderer: DX11" and so on, formatted at the start of this function
             ImGui::PopStyleColor();
             ImGui::EndGroup();
         }
