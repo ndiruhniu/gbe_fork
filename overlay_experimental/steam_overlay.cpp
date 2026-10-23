@@ -11,7 +11,6 @@
 #include <string>
 #include <sstream>
 #include <cctype>
-#include <cstring>
 #include <cmath>
 #include <utility>
 #include <unordered_set>
@@ -483,6 +482,7 @@ void Steam_Overlay::create_fonts()
         font_builder.AddText(translationSteamId[i]);
         font_builder.AddText(translationAppId[i]);
         font_builder.AddText(translationBackToGame[i]);
+        font_builder.AddText(translationExitGame[i]);
         font_builder.AddText(translationClockTooltip[i]);
         font_builder.AddText(translationDateTooltip[i]);
         font_builder.AddText(translationDay[i]);
@@ -2168,8 +2168,8 @@ void Steam_Overlay::render_main_window()
         const float tile = std::floor(fs * 2.5f + 0.5f); // edge of a toolbar button
         const float top_y = std::floor(fs * 5.5f);
 
-        // top bar, left (drawn further below): the clock, the date, the playtime of this session and the renderer.
-        // The clock and the date are drawn big, the clock as wide as the date: together a rectangle
+        // top bar, left (drawn further below): a large clock, the date under it, the playtime of this session, the
+        // renderer and an "Exit Game" button
         time_t now_time = time(nullptr);
         struct tm now_tm{};
 #ifdef _MSC_VER
@@ -2221,8 +2221,7 @@ void Steam_Overlay::render_main_window()
             // ISO 8601 when the system's format can't be read
             return format.find_first_of("dMy") == std::string::npos ? std::string("yyyy-MM-dd") : format;
         }();
-        // the numbers with the separators between them, and the names of the parts in the same order for the tooltip.
-        // The day and the month always have two digits: the date keeps its width, and so does the clock
+        // the numbers with the separators between them, and the names of the parts in the same order for the tooltip
         std::string date_text{}, date_parts{}, separator{};
         for (size_t i = 0; i < date_format.size();) {
             const char letter = date_format[i];
@@ -2232,10 +2231,10 @@ void Steam_Overlay::render_main_window()
             char number[16]{};
             const char *part = nullptr;
             if (letter == 'd' && count <= 2) { // ("ddd" and "dddd" are the name of the day of the week)
-                snprintf(number, sizeof(number), "%02d", now_tm.tm_mday);
+                snprintf(number, sizeof(number), count == 2 ? "%02d" : "%d", now_tm.tm_mday);
                 part = translationDay[current_language];
             } else if (letter == 'M') {
-                snprintf(number, sizeof(number), "%02d", now_tm.tm_mon + 1);
+                snprintf(number, sizeof(number), count == 1 ? "%d" : "%02d", now_tm.tm_mon + 1);
                 part = translationMonth[current_language];
             } else if (letter == 'y') {
                 snprintf(number, sizeof(number), "%02d", count <= 2 ? now_tm.tm_year % 100 : now_tm.tm_year + 1900);
@@ -2254,24 +2253,14 @@ void Steam_Overlay::render_main_window()
             date_text += number;
             date_parts += part;
         }
-        // the clock and the date are plain text in the overlay's font, just big: the date at `date_h` pixels, the clock as
-        // big as it can be without getting wider than the date. They are measured on "00:00" and "00.00.00" (every digit a
-        // zero) and not on the numbers shown: the digits can have different widths and the size would change every minute
-        auto zeros = [](std::string text) {
-            for (char &c : text) { if (c >= '0' && c <= '9') c = '0'; }
-            return text;
-        };
-        ImFont *clock_font = ImGui::GetFont();
-        auto text_width = [clock_font](float size, const std::string &text) { return clock_font->CalcTextSizeA(size, FLT_MAX, 0.0f, text.c_str()).x; };
-        const float date_h = std::floor(fs * 1.6f);
-        const std::string date_ref = zeros(date_text);
-        const std::string clock_ref = zeros(clock_buf);
-        const float date_w = text_width(date_h, date_ref);
-        float clock_h = std::floor(date_h * date_w / (std::max)(1.0f, text_width(date_h, clock_ref)));
-        clock_h = (std::min)((std::max)(clock_h, date_h), date_h * 3.0f);
         // the stats box goes below these lines while the overlay is shown, the left column below the stats box
-        float top_bar_bottom = pad + clock_h + ImGui::GetStyle().ItemSpacing.y + date_h + ImGui::GetTextLineHeightWithSpacing();
+        // (font sizes as PushFont() takes them: before the global scale)
+        const float clock_size = std::floor(font_default->LegacySize * 2.75f + 0.5f);
+        const float date_size = std::floor(font_default->LegacySize * 1.5f + 0.5f);
+        const float text_scale = fs / font_default->LegacySize;
+        float top_bar_bottom = pad + (clock_size + date_size) * text_scale + 2.0f * ImGui::GetStyle().ItemSpacing.y + ImGui::GetTextLineHeight();
         if (settings->record_playtime && playtime_counter) top_bar_bottom += ImGui::GetTextLineHeightWithSpacing();
+        top_bar_bottom += 2.0f * ImGui::GetStyle().ItemSpacing.y + ImGui::GetFrameHeight(); // the button, after a little space
         const float top_gap = std::floor(fs * 0.75f + 0.5f);
         stats.top_inset = top_bar_bottom + top_gap - pad; // (the stats box keeps the same distance from the edges itself)
         const float left_top_y = std::floor(top_bar_bottom + top_gap + fs * 2.0f + top_gap);
@@ -2306,18 +2295,16 @@ void Steam_Overlay::render_main_window()
         {
             ImGui::SetCursorPos(ImVec2(pad, pad));
             ImGui::BeginGroup();
-            // a white clock and light gray lines under it, readable over a bright game too.
+            // a large white clock and light gray lines under it, readable over a bright game too.
             // Hovering the clock or the date tells what they show
-            ImGui::PushFont(nullptr, clock_h);
+            ImGui::PushFont(font_default, clock_size);
             ImGui::TextColored(ImVec4(1.0f, 1.0f, 1.0f, 1.0f), "%s", clock_buf);
-            const bool clock_hovered = ImGui::IsItemHovered();
             ImGui::PopFont();
-            if (clock_hovered) ImGui::SetTooltip("%s", translationClockTooltip[current_language]);
-            ImGui::PushFont(nullptr, date_h);
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", translationClockTooltip[current_language]);
+            ImGui::PushFont(font_default, date_size);
             ImGui::TextColored(ImVec4(0.722f, 0.737f, 0.749f, 1.0f), "%s", date_text.c_str());
-            const bool date_hovered = ImGui::IsItemHovered();
             ImGui::PopFont();
-            if (date_hovered) ImGui::SetTooltip(translationDateTooltip[current_language], date_parts.c_str());
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip(translationDateTooltip[current_language], date_parts.c_str());
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.722f, 0.737f, 0.749f, 1.0f));
             if (settings->record_playtime && playtime_counter) {
                 uint64_t session_sec = playtime_counter->session_seconds();
@@ -2328,6 +2315,14 @@ void Steam_Overlay::render_main_window()
             }
             ImGui::TextUnformatted(tmp); // "Renderer: DX11" and so on, formatted at the start of this function
             ImGui::PopStyleColor();
+            // Steam's "Exit Game" button: it turns red under the mouse and closes the game right away, like Steam's own
+            ImGui::Spacing();
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.886f, 0.165f, 0.153f, 1.0f)); // #e22a27
+            ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.70f, 0.12f, 0.11f, 1.0f));
+            if (ImGui::Button(translationExitGame[current_language])) {
+                std::exit(0);
+            }
+            ImGui::PopStyleColor(2);
             ImGui::EndGroup();
         }
 
