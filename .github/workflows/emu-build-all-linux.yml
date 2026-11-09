@@ -11,7 +11,7 @@ permissions:
 
 env:
   PREMAKE_ACTION: "gmake"
-  DEPS_CACHE_KEY: "emu-deps-linux"
+  DEPS_CACHE_KEY: "emu-deps-linux-v2"
   DEPS_CACHE_DIR: "build/deps/linux"
 
   PACKAGE_BASE_DIR: "build/package/linux"
