@@ -469,7 +469,6 @@ table_append(common_link_linux, deps_link)
 -- overlay libs
 local overlay_link = {
     "ingame_overlay",
-    "system", -- ingame_overlay dependency
     "mini_detour", -- ingame_overlay dependency
 }
 -- we add them later when needed
