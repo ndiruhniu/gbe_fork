@@ -252,12 +252,10 @@ local x32_deps_include = {
     path.join(deps_dir, "mbedtls/install32/include"),
     path.join(deps_dir, "opus/install32/include"),
     path.join(deps_dir, "portaudio/install32/include"),
-    path.join(deps_dir, "sdl/install32/include"),
 }
 
 local x32_deps_overlay_include = {
     path.join(deps_dir, "ingame_overlay/install32/include"),
-    path.join(deps_dir, "ingame_overlay/deps/System/install32/include"),
     path.join(deps_dir, "ingame_overlay/deps/mini_detour/install32/include"),
 }
 
@@ -269,12 +267,10 @@ local x64_deps_include = {
     path.join(deps_dir, "mbedtls/install64/include"),
     path.join(deps_dir, "opus/install64/include"),
     path.join(deps_dir, "portaudio/install64/include"),
-    path.join(deps_dir, "sdl/install64/include"),
 }
 
 local x64_deps_overlay_include = {
     path.join(deps_dir, "ingame_overlay/install64/include"),
-    path.join(deps_dir, "ingame_overlay/deps/System/install64/include"),
     path.join(deps_dir, "ingame_overlay/deps/mini_detour/install64/include"),
 }
 
@@ -286,12 +282,10 @@ local arm_deps_include = {
     path.join(deps_dir, "mbedtls/installarm/include"),
     path.join(deps_dir, "opus/installarm/include"),
     path.join(deps_dir, "portaudio/installarm/include"),
-    path.join(deps_dir, "sdl/installarm/include"),
 }
 
 local arm_deps_overlay_include = {
     path.join(deps_dir, "ingame_overlay/installarm/include"),
-    path.join(deps_dir, "ingame_overlay/deps/System/installarm/include"),
     path.join(deps_dir, "ingame_overlay/deps/mini_detour/installarm/include"),
 }
 
@@ -340,11 +334,6 @@ if os.target() == 'windows' then
     zlib_archive_name = 'zs' -- even on MinGw we need this name
 end
 
-local sdl_name = 'SDL3'
-if os.target() == 'windows' then
-    sdl_name = 'SDL3-static'
-end
-
 local deps_link = {
     "ssq"                .. static_postfix,
     zlib_archive_name    .. static_postfix,
@@ -354,7 +343,6 @@ local deps_link = {
     "mbedx509"           .. static_postfix,
     "opus"               .. static_postfix,
     "portaudio"          .. static_postfix,
-    sdl_name             .. static_postfix,
 }
 -- add protobuf libs
 table_append(deps_link, {
@@ -508,12 +496,10 @@ local x32_deps_libdir = {
     path.join(deps_dir, "mbedtls/install32/lib"),
     path.join(deps_dir, "opus/install32/lib"),
     path.join(deps_dir, "portaudio/install32/lib"),
-    path.join(deps_dir, "sdl/install32/lib"),
 }
 
 local x32_deps_overlay_libdir = {
     path.join(deps_dir, "ingame_overlay/install32/lib"),
-    path.join(deps_dir, "ingame_overlay/deps/System/install32/lib"),
     path.join(deps_dir, "ingame_overlay/deps/mini_detour/install32/lib"),
 }
 
@@ -526,12 +512,10 @@ local x64_deps_libdir = {
     path.join(deps_dir, "ingame_overlay/install64/lib"),
     path.join(deps_dir, "opus/install64/lib"),
     path.join(deps_dir, "portaudio/install64/lib"),
-    path.join(deps_dir, "sdl/install64/lib"),
 }
 
 local x64_deps_overlay_libdir = {
     path.join(deps_dir, "ingame_overlay/install64/lib"),
-    path.join(deps_dir, "ingame_overlay/deps/System/install64/lib"),
     path.join(deps_dir, "ingame_overlay/deps/mini_detour/install64/lib"),
 }
 
@@ -544,12 +528,10 @@ local arm_deps_libdir = {
     path.join(deps_dir, "ingame_overlay/installarm/lib"),
     path.join(deps_dir, "opus/installarm/lib"),
     path.join(deps_dir, "portaudio/installarm/lib"),
-    path.join(deps_dir, "sdl/installarm/lib"),
 }
 
 local arm_deps_overlay_libdir = {
     path.join(deps_dir, "ingame_overlay/installarm/lib"),
-    path.join(deps_dir, "ingame_overlay/deps/System/installarm/lib"),
     path.join(deps_dir, "ingame_overlay/deps/mini_detour/installarm/lib"),
 }
 
